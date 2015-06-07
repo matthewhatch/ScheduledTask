@@ -1,18 +1,24 @@
 ﻿<#
     .SYNOPSIS
-        Enable/Disable Scheduled Tasks
-
+        Enables Scheduled Task
+        
     .DESCRIPTION
-        See Synopsis
+        Enables a schedule task that is passed to the Task parameter.  Use the ComputerName parameter to Enable task on a remote sever
 
     .PARAMETER ComputerName
+        ComputerName of the server to Enable the task on
 
     .PARAMETER Credential
-
+        Credential of the user to connect to the Server
+        
     .PARAMETER Task
-
+        Name of the Task to enable
+        
+    .Example
+        Enable-ScheduledTask -Task 'SomeTaskName'
+    
     .NOTES
-        Wrapper Module for SchTasks
+        Wrapper Module for SchTasks... I know there's a similar Cmdlet for Windows 2012R2 Server, but this doesn't help with 2008R2
 
 #>
 Function Enable-ScheduledTask{
