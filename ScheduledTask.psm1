@@ -1,4 +1,53 @@
 ﻿<#
+    .NOTES
+        Start-ScheduledTask was created to support the running of Scheduled Tasks on demand for servers that don't support the new 
+        ScheduleTasks Module/Cmdlets
+
+        This is designed to be used in conjuction with constrained endpoints in order to give user accounts rights to start the task
+#>
+Function Start-ScheduledTask {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param(
+       
+        [Parameter(ValueFromPipelineByPropertyName=$true,Position=0)]
+        [System.String]
+        $TaskName,
+
+        [Parameter(ValueFromPipelineByPropertyName=$true,Position=1)]
+        [System.String]
+        $ComputerName = $env:COMPUTERNAME,
+
+        [Parameter(ValueFromPipelineByPropertyName=$true,Position=2)]
+        [PSCredential]
+        $Credential
+    )
+
+    BEGIN{
+        $StartTask = {
+            param($TaskName)
+            & schtasks /RUN /TN $TaskName
+        }
+    }
+    PROCESS{
+        
+        if($PSCmdlet.ShouldProcess("$TaskName")){
+            if($ComputerName -ne $env:COMPUTERNAME){
+                $result = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ArgumentList $TaskName -ScriptBlock $StartTask
+            }
+            else{
+                $result = & $StartTask -TaskName $TaskName
+            }
+        }
+
+        Write-Verbose "$result on $ComputerName"
+        
+    }
+    END{}
+    
+
+}
+
+<#
     .SYNOPSIS
         Enable/Disable Scheduled Tasks
 
@@ -52,18 +101,18 @@ Function Disable-ScheduledTask{
         $Credential,
 
         [System.String]
-        $Task
+        $TaskName
     )
 
     BEGIN{
         $CodeBlock = {
-            param($Task)
-            & schtasks /Change /TN $Task /Disable
+            param($TaskName)
+            & schtasks /Change /TN $TaskName /Disable
         }
     }
     PROCESS{
         if($ComputerName -eq $env:COMPUTERNAME){& $CodeBlock}
-        else{Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock $CodeBlock -ArgumentList $Task}
+        else{Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock $CodeBlock -ArgumentList $TaskName}
     }
     END{}
 }
@@ -88,28 +137,34 @@ function Get-ScheduledTask
         $ComputerName = $env:COMPUTERNAME,
 
         [PSCredential]
-        $Credential
+        $Credential,
+
+        [System.String]
+        $TaskName
     )
 
     Begin
     {
-        $GetBlock = {& schtasks /QUERY /FO CSV}
-        $RemoteBlock = {
-            param($ComputerName,$User,$Password)
-            & schtasks /QUERY /FO CSV /V /S $ComputerName /U $User /P $Password
+        $GetBlock = {
+            param(
+                $TaskName
+            )
+            
+            $Query = '/QUERY /FO CSV'
+            
+            if($TaskName){& schtasks /QUERY /TN $TaskName /V /FO CSV }
+            else{& schtasks /QUERY /V /FO CSV}
+            
         }
     }
     Process
     {
-        if($ComputerName -eq $env:COMPUTERNAME){
-            & $GetBlock
-        }
-        else{
-            Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock $GetBlock
-            #& $RemoteBlock -ComputerName $ComputerName -User $Credential.UserName -Password $Credential.GetNetworkCredential().Password 
-        }
+        if($ComputerName -eq $env:COMPUTERNAME){$AllTasks = & $GetBlock -TaskName $TaskName}
+        else{$AllTasks = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock $GetBlock -ArgumentList $TaskName}
+
+        $AllTasks | ConvertFrom-Csv
+
     }
-    End
-    {
-    }
+    
+    End{}
 }
