@@ -1,4 +1,20 @@
 ﻿<#
+    .SYNOPSIS
+        Start Scheduled Task
+
+    .DESCRIPTION
+        Starts A Microsoft Scheduled Task on local machine or remote server (Remoting must be enabled)
+
+    .PARAMETER Taskname
+        Name of the Scheduled Task to be Started
+
+    .PARAMETER ComputerName
+        Computer to start the scheduled task on
+
+    .PARAMETER Credential
+        Credential needed to connect to remote machine
+        
+    
     .NOTES
         Start-ScheduledTask was created to support the running of Scheduled Tasks on demand for servers that don't support the new 
         ScheduleTasks Module/Cmdlets
@@ -32,10 +48,20 @@ Function Start-ScheduledTask {
         
         if($PSCmdlet.ShouldProcess("$TaskName")){
             if($ComputerName -ne $env:COMPUTERNAME){
-                $result = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ArgumentList $TaskName -ScriptBlock $StartTask
+                try{
+                    $result = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ArgumentList $TaskName -ScriptBlock $StartTask
+                }
+                catch{
+                    throw
+                }
             }
             else{
-                $result = & $StartTask -TaskName $TaskName
+                try{
+                    $result = & $StartTask -TaskName $TaskName
+                }
+                catch{
+                    throw
+                }
             }
         }
 
@@ -49,10 +75,10 @@ Function Start-ScheduledTask {
 
 <#
     .SYNOPSIS
-        Enable/Disable Scheduled Tasks
+        Enable Scheduled Tasks
 
     .DESCRIPTION
-        See Synopsis
+        Enable Microsoft Scheduled Tasks on the local machine or remote server
 
     .PARAMETER ComputerName
 
